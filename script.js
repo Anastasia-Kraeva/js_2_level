@@ -17,6 +17,46 @@ const renderGoodsList = list => {
 
 renderGoodsList(goods);
 
-// 2) Можно убрать скобки у параметра ф-ии; убрать фигурные скобки и return. Возможно, в данном случае, допустимо заменить вызов ф-ии renderGoodsItem на ее содержимое.
-// 3) Запятые выводятся, потому что innerHTML преобразует див в строку. Скорее всего, этот метод и массив читает как строку. Вот только не понятно, почему кавычки не выводятся, их же там не одна пара, а целая строка внутри которой еще текст в кавычках  ( " '..', '..' и тд " ). :/
+class СartItem {
+    constructor(title, price) {
+        this.title = title;
+        this.price = price;
+    }
+    render() {
+        return `<div class="goods-item"><h3>${this.title}</h3><p>${this.price}</p></div>`;
+    }
+}
 
+class СartList {
+    constructor() {
+        this.items = [];
+    }
+    fetchItem() {
+        this.items = [
+            { title: 'Shirt', price: 150 },
+            { title: 'Socks', price: 50 },
+            { title: 'Jacket', price: 350 },
+            { title: 'Shoes', price: 250 },
+        ];
+    }
+    totalСost() {
+        const arrPrice = list.items.map(i => i.price)
+        const sum = arrPrice.reduce((s, cur) => s + cur)
+        return `Общая сумма товаров: ${sum} рублей`
+    }
+    render() {
+        let listHtml = '';
+        this.items.forEach(arrayElement => {
+            const product = new СartItem(arrayElement.title, arrayElement.price);
+            listHtml += product.render();
+        });
+        document.querySelector('.goods-list').innerHTML = listHtml;
+        document.querySelector('main').innerHTML += `<div class="sum">${this.totalСost()}</div>`;
+    }
+}
+
+const list = new СartList();
+list.fetchItem();
+list.render();
+console.log(list)
+list.totalСost()
