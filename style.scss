@@ -24,9 +24,9 @@ header {
     background-color: #fff;
     margin-left: auto
 }
-.goods-list {
+.list {
     width: 1082px;
-    margin: auto;
+    margin: 20px auto;
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     grid-template-rows: repeat(2, 1fr);
@@ -38,7 +38,7 @@ header {
     border: 1px solid #222;
     border-top: 0;
 }
-.goods-item {
+.item {
     border: 1px solid $dark_grey;
     background-color: #fff;
     height: 210px;
