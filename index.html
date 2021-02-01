@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Vue.js</title>
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+    <div id="app">
+        <div id="nav">
+            <search-form v-if="isVisibleCatalog"></search-form>
+            <button class="cart-button" type="button" v-on:click="isVisibleCatalog = false
+            isVisibleCart = true">Корзина</button>
+            <button class="goods-button" type="button" v-on:click="isVisibleCatalog = true
+            isVisibleCart = false">Каталог</button>
+        </div>
+        <goods-list v-if="isVisibleCatalog" ref="goodlist"></goods-list>
+        <cart-list v-if="isVisibleCart" ref="cartlist"></cart-list>
+        <p v-if="isVisibleCart" style="text-align:center;">Сумма: {{sum}} &#8381;</p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
