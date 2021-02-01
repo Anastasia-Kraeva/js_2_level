@@ -1,174 +1,246 @@
-const API_URL = 'https://raw.githubusercontent.com/GeekBrainsTutorial/online-store-api/master/responses';
-
-class CartItem {
-    constructor(id_product, product_name, price) {
-        this.id_product = id_product;
-        this.product_name = product_name;
-        this.price = price;
-        this.count = 1;
-    }
-    render() {
-        return `<div class='cart-item' id='${this.id_product}'><h3>${this.product_name}</h3><p>${this.price}</p><button class="remove" data-id="${this.id_product}" >удалить из корзины</button></div>`;
-    }
-}
-
-class CartList {
-    constructor() {
-        this.items = [];
-        this.sum = 0;
-    }
-    removeItem(id) {
-        id = +id;
-        localStorage.removeItem(id);
-        list.items = localStorage
-        list.render()
-    }
-    fetchItem() {
-        // return new Promise((resolve, reject) => {
-        //     if (localStorage !== 0) {
-        //         list.items = localStorage
-        //     } else {
-        //         list.render()
-        //     }
-        // });
-    }
-    totalCost() {
-        this.sum = 0;
-        for (let key in list.items) {
-            if (key == 'length') {
-                break
-            }
-            key = +key
-            this.sum += JSON.parse(list.items[key]).price * JSON.parse(list.items[key]).count
+Vue.component('search-form', {
+    template: `
+        <div>
+            <form id="search_form" @submit.prevent="FilterGoods">
+                <input class="goods_search" id="search_line" v-model='searchLine'>
+                <input type="submit" value="Искать">
+            </form>
+        </div>
+    `,
+    data() {
+        return {
+            searchLine: null,
         }
+    },
+    methods: {
+        FilterGoods() {
+            let filteredGoods = app.$refs.goodlist.goods
+            let search = this.searchLine.toLowerCase();
+            app.$refs.goodlist.filterGoods = []
+            for (key in filteredGoods) {
+                el = filteredGoods[key]
+                if (el.product_name.toLowerCase().indexOf(search) != -1) app.$refs.goodlist.filterGoods.push(el)
+            }
+        },
     }
-    getListItem() {
-        let list_items = list.items.filter(function (el) { return typeof el == 'string' })
-            .map(function (el) {
-                let obj = JSON.parse(el);
-                return obj.product_name
+});
+
+Vue.component('goods-list', {
+    template: `
+      <div class="list goods-list">
+        <goods-item v-for="good in filterGoods" v-bind:good="good" v-bind:key="good.id_product"></goods-item>
+      </div>
+    `,
+    data: function () {
+        return {
+            goods: [],
+            filterGoods: [],
+            API_URL: 'https://raw.githubusercontent.com/GeekBrainsTutorial/online-store-api/master/responses',
+        }
+    },
+    methods: {
+        makeGETRequest(url, callback) {
+            var xhr;
+
+            if (window.XMLHttpRequest) {
+                xhr = new XMLHttpRequest();
+            } else if (window.ActiveXObject) {
+                xhr = new ActiveXObject("Microsoft.XMLHTTP");
+            }
+
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    callback(xhr.responseText);
+                }
+            }
+
+            xhr.open('GET', url, true);
+            xhr.send();
+        },
+
+    },
+    mounted() {
+        this.makeGETRequest(`/catalogData`, (goods) => {
+            this.goods = JSON.parse(goods);
+            this.filterGoods = JSON.parse(goods);
+        });
+    },
+});
+
+Vue.component('goods-item', {
+    props: ['good'],
+    template: `
+      <div class="item goods-item">
+        <h3>{{ good.product_name }}</h3>
+        <p>{{ good.price }}</p>
+        <button class="add" v-on:click="addToCart(good.id_product)">добавить в корзину</button>
+      </div>
+    `,
+    methods: {
+        makePOSTRequest(url, data, callback) {
+            let xhr;
+
+            if (window.XMLHttpRequest) {
+                xhr = new XMLHttpRequest();
+            } else if (window.ActiveXObject) {
+                xhr = new ActiveXObject("Microsoft.XMLHTTP");
+            }
+
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    callback(xhr.responseText);
+                }
+            }
+
+            xhr.open('POST', url, true);
+            xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+
+            xhr.send(data);
+        },
+        addToCart(id) {
+            let el = JSON.stringify(app.$refs.goodlist.goods.find(x => x.id_product == id))
+            this.makePOSTRequest('/addToCart', el, () => {
             })
-        console.log(list_items.join(', '))
-    }
-    render() {
-        if (!(document.querySelector('.catalog-button'))) {
-            document.querySelector('header').innerHTML = '<a class="catalog-button header-button" type="button" href="index.html">Каталог</a>'
         }
+    }
+});
 
-        if (document.querySelector('.cart-list')) {
-            if (list.items.length == 0) {
-                document.querySelector('main').innerHTML = `<div>Ваша корзина пуста</div>`
-            }
-
-            else {
-                let listHtml = '';
-                let product;
-
-                for (let key in list.items) {
-                    if (key == 'length') {
-                        break;
-                    }
-                    key = +key
-                    let ss = JSON.parse(list.items[key])
-                    product = new CartItem(ss.id_product, ss.product_name, ss.price);
-                    listHtml += product.render();
-                }
-                this.totalCost()
-                document.querySelector('.cart-list').innerHTML = listHtml;
-                if (document.querySelector('.sum')) {
-                    document.querySelector('.sum').innerHTML = `<div class='sum'>Общая сумма товаров: ${this.sum} рублей</div>`
-                } else {
-                    document.querySelector('main').innerHTML += `<div class='sum'>Общая сумма товаров: ${this.sum} рублей</div>`;
-                }
+Vue.component('cart-list', {
+    template: `
+    <div>
+        <div class="list cart-list" v-if="cartArr.length">
+            <cart-item v-for="item in cartArr" v-bind:item="item" v-bind:key="item.id_product">
+            </cart-item>
+        </div>
+        <p v-if="!cartArr.length" style="text-align:center;">Корзина пуста</p>
+    </div>
+    `,
+    data: function () {
+        return {
+            cartArr: [],
+        }
+    }, methods: {
+        costSum() {
+            app.sum = 0;
+            for (let item of this.cartArr) {
+                app.sum += item.price * item.count
             }
         }
-    }
-}
-
-class GoodsItem {
-    constructor(id, product_name, price) {
-        this.id = id;
-        this.product_name = product_name;
-        this.price = price;
-        this.count = 1;
-    }
-    addToCart(id) {
-        id = +id
-        let LocStorGet = JSON.parse(localStorage.getItem(id))
-        if (LocStorGet) {
-            LocStorGet['count']++
-            localStorage.setItem(id, JSON.stringify(LocStorGet));
-        } else {
-            localStorage.setItem(id, JSON.stringify(listG.goods.find(x => x.id_product == id)))
-        }
-    }
-    render() {
-        return `<div class='goods-item' id='${this.id}'><h3>${this.product_name}</h3><p>${this.price}</p><button class="add" data-id="${this.id}">добавить в корзину</button></div>`;
-    }
-}
-
-class GoodsList {
-    constructor() {
-        this.goods = [];
-    }
-    fetchGoods() {
-        return new Promise((resolve, reject) => {
-            makeGETRequest(`${API_URL}/catalogData.json`)
-                .then((goods) => {
-                    let gg = JSON.parse(goods)
-                    gg.map(i => i['count'] = 1);
-                    this.goods = gg;
-                    resolve();
-                })
-                .catch((error) => {
-                    reject(error);
-                });
+    },
+    beforeMount: function () {
+        app.$refs.goodlist.makeGETRequest(`/cartData`, (cart) => {
+            this.cartArr = Object.values(JSON.parse(cart));
+            this.costSum()
         });
-    }
-    render() {
-        if (!(document.querySelector('.cart-button'))) {
-            document.querySelector('header').innerHTML = '<a class="cart-button header-button" type="button" href="cart.html">Корзина</a>'
-        }
+    },
+});
 
-        let listHtml = '';
-        this.goods.forEach(good => {
-            const goodItem = new GoodsItem(good.id_product, good.product_name, good.price);
-            listHtml += goodItem.render();
-        });
-        document.querySelector('.goods-list').innerHTML = listHtml;
-    }
-}
+Vue.component('cart-item', {
+    props: ['item'],
+    template: `
+        <div class="item cart-item">
+            <h3 class="title">{{ item.product_name }}</h3>
+            <p class="price">цена: {{ item.price }}	
+            &#8381;</p>
+            <p>количество: {{ item.count }}</p>
+            <button class="delete" v-on:click="deleteFromCart(item.id_product)">удалить из корзины</button>
+        </div>
+    `,
+    methods: {
+        makePOSTRequest(url, data, callback) {
+            let xhr;
 
-function makeGETRequest(url) {
-    return new Promise((resolve, reject) => {
+            if (window.XMLHttpRequest) {
+                xhr = new XMLHttpRequest();
+            } else if (window.ActiveXObject) {
+                xhr = new ActiveXObject("Microsoft.XMLHTTP");
+            }
 
-        let xhr;
-
-        if (window.XMLHttpRequest) {
-            xhr = new XMLHttpRequest();
-        } else if (window.ActiveXObject) {
-            xhr = new ActiveXObject("Microsoft.XMLHTTP");
-        }
-
-        xhr.onreadystatechange = function () {
-
-            if (xhr.readyState === 4) {
-                if (xhr.status == 200) {
-                    resolve(xhr.responseText);
-                } else {
-                    reject(xhr.status)
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    callback(xhr.responseText);
                 }
             }
+
+            xhr.open('POST', url, true);
+            xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+
+            xhr.send(data);
+        },
+
+        deleteFromCart(id) {
+            this.makePOSTRequest('/deleteFromCart', JSON.stringify({ 'id': id }), () => {
+            })
+            let goods = []
+            for (let item = 0; item < app.$refs.cartlist.cartArr.length; item++) {
+                if (app.$refs.cartlist.cartArr[item]['id_product'] !== id) {
+                    goods.push(app.$refs.cartlist.cartArr[item])
+                }
+            }
+            app.$refs.cartlist.cartArr = goods
+            app.$refs.cartlist.costSum()
         }
+    }
+});
 
-        xhr.open('GET', url, true);
-        xhr.send();
-    });
-}
+var app = new Vue({
+    el: '#app',
+    data: {
+        isVisibleCatalog: true,
+        isVisibleCart: false,
+        sum: 0,
+    }
+});
 
-makeGETRequest(API_URL)
-    .then((xhr) => {
-        console.log(xhr.readyState);
-    }, (error) => {
-        console.log('error: ' + error)
-    });
+
+// Vue.component('error', {
+//     props: ['error'],
+//     template: `
+//     <div v-if=''>
+//         Error: не удаётся выполнить запрос к серверу
+//     </div>
+//     `
+// });
+
+// const app = new Vue({
+//     el: '#app',
+
+// data: {
+//     goods: [],
+//     filteredGoods: [],
+//     searchLine: '',
+//     API_URL: 'https://raw.githubusercontent.com/GeekBrainsTutorial/online-store-api/master/responses',
+//     searchLine: '',
+//     isVisibleCatalog: true,
+//     cart: [],
+//     isVisibleCart: false,
+// },
+// methods: {
+//     makeGETRequest(url, callback) {
+//         var xhr;
+
+//         if (window.XMLHttpRequest) {
+//             xhr = new XMLHttpRequest();
+//         } else if (window.ActiveXObject) {
+//             xhr = new ActiveXObject("Microsoft.XMLHTTP");
+//         }
+
+//         xhr.onreadystatechange = function () {
+//             if (xhr.readyState === 4) {
+//                 callback(xhr.responseText);
+//             }
+//         }
+
+//         xhr.open('GET', url, true);
+//         xhr.send();
+//     },
+
+//     mounted() {
+//         this.makeGETRequest(`${app.API_URL}/catalogData.json`, (goods) => {
+//             this.goods = JSON.parse(goods);
+//         });
+//     },
+
+// },
+// });
+// app.mounted()
